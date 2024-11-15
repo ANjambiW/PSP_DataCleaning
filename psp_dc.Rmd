@@ -1,0 +1,1063 @@
+---
+title: 'Data Cleaning: Monitoring PSP'
+author: "Njambi"
+date: "June 22, 2024"
+output: html_document
+---
+
+
+
+```{r, include=FALSE}
+## Clear the environment
+
+rm(list = ls())
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+```{r, include=FALSE}
+
+## Loading necessary libraries
+
+library(tidyverse) # includes the dplyr, ggplot2, tidyr, readr, stringr, forcats, tibble packages
+library(readxl)
+library(Hmisc)
+library(labelled)
+library(magrittr)
+library(datawizard)
+library(gtsummary)
+library(gt)
+library(kableExtra)
+library(flextable)
+library(splitstackshape)
+library(lubridate)
+library(foreign)
+library(haven)
+library(viridis)
+library(ggthemes)
+library(hrbrthemes)
+library(patchwork)
+library(janitor)
+
+#library(ggplot2)
+#library(tidyr)
+#library(tibble)
+#library(dplyr)
+#library(stringr)
+
+```
+
+
+
+
+
+
+
+```{r, include=FALSE}
+
+## Set the working directory
+
+setwd("C:\\Users\\awanjau\\OneDrive - CGIAR\\Alliance\\Alliance_2024\\PSP\\PSP_DataCleaning")
+
+```
+
+
+
+
+
+
+```{r, include=TRUE}
+
+## Loading data
+
+Monitoring_PSP_11032024_all_versions_labels_2024_03_19_07_33_31 <- read_excel("C:/Users/awanjau/OneDrive - CGIAR/Alliance/Alliance_2024/PSP/PryData_19032024/Monitoring_PSP_11032024_-_all_versions_-_labels_-_2024-03-19-07-33-31.xlsx")
+
+psp_24 <- Monitoring_PSP_11032024_all_versions_labels_2024_03_19_07_33_31 %>%
+  dplyr::select(82, 6:81) 
+  
+
+psp_24 <- janitor::clean_names(psp_24)
+
+
+names(psp_24)
+
+```
+
+
+
+
+```{r cars}
+# Check the dimension of the data
+
+dim(psp_24)
+```
+
+
+
+```{r, include=FALSE}
+
+attach(psp_24)
+
+```
+
+
+
+## 2. sex_of_the_respondent
+
+
+```{r}
+unique(sex_of_the_respondent)
+```
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(sex_of_the_respondent = factor(sex_of_the_respondent))
+```
+
+
+
+```{r}
+unique(psp_24$sex_of_the_respondent)
+```
+
+
+
+
+
+
+## ***To be dropped*** 4. please_specify_institution_you_belong_to_or_work_for
+
+
+
+```{r}
+unique(please_specify_institution_you_belong_to_or_work_for)
+```
+
+
+```{r}
+
+other_institution <- psp_24 %>%
+  dplyr::select(index, 3:4) %>%
+ # filter(!is.na(please_specify_institution_you_belong_to_or_work_for))
+  
+  filter(what_type_of_institution_do_you_belong_to_or_work_for == "Other (please specify)")
+
+gt(other_institution)
+```
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    please_specify_institution_you_belong_to_or_work_for = ifelse(please_specify_institution_you_belong_to_or_work_for == "ITIKI ( Project)", "ITIKI Project", please_specify_institution_you_belong_to_or_work_for),
+    
+    please_specify_institution_you_belong_to_or_work_for = ifelse(please_specify_institution_you_belong_to_or_work_for %in% c("A Farmer", "Farmer and rainfall observer"), NA_character_, please_specify_institution_you_belong_to_or_work_for)
+    
+    
+  )
+```
+
+
+
+```{r}
+unique(psp_24$please_specify_institution_you_belong_to_or_work_for)
+```
+
+
+
+## 3. what_type_of_institution_do_you_belong_to_or_work_for
+
+
+```{r}
+unique(what_type_of_institution_do_you_belong_to_or_work_for)
+```
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    what_type_of_institution_do_you_belong_to_or_work_for = str_replace_all(what_type_of_institution_do_you_belong_to_or_work_for, "Other \\(please specify\\)",
+                                               replacement = please_specify_institution_you_belong_to_or_work_for),
+    
+    what_type_of_institution_do_you_belong_to_or_work_for = factor(
+      what_type_of_institution_do_you_belong_to_or_work_for,
+      exclude = c("None")
+      )
+    )
+```
+
+
+
+```{r}
+unique(psp_24$what_type_of_institution_do_you_belong_to_or_work_for)
+```
+
+
+
+
+## ***To be dropped*** [6] "please_specify_your_role_in_this_institution"    
+
+
+```{r}
+unique(please_specify_your_role_in_this_institution)
+```
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    please_specify_your_role_in_this_institution = case_when(
+      
+      please_specify_your_role_in_this_institution == "Rainfall Volunteer obsever" ~ "Rainfall Volunteer Observer",
+      please_specify_your_role_in_this_institution == "Extension officer" ~ "Extension Officer",
+      please_specify_your_role_in_this_institution == "Senior Livestock production officer" ~ "Senior Livestock Production Officer",
+      please_specify_your_role_in_this_institution == "Extension to farmers" ~ "Extension Officer",
+      please_specify_your_role_in_this_institution == "Drought management and reducing risk of drought" ~ "Drought Management and Reducing Risk of Drought",
+        
+      
+      TRUE ~ please_specify_your_role_in_this_institution
+    )
+    
+  )
+```
+
+
+
+```{r}
+unique(psp_24$please_specify_your_role_in_this_institution)
+```
+
+
+
+
+## 5. what_is_your_role_in_this_institution
+
+```{r}
+unique(what_is_your_role_in_this_institution)
+```
+
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    what_is_your_role_in_this_institution = str_replace_all(what_is_your_role_in_this_institution, "Other \\(Please specify\\)" ,
+                                               replacement = please_specify_your_role_in_this_institution),
+    
+    what_is_your_role_in_this_institution = factor(what_is_your_role_in_this_institution)
+    )
+```
+
+
+
+```{r}
+unique(psp_24$what_is_your_role_in_this_institution)
+```
+
+
+
+
+## [7] "does_your_institution_have_gender_inclusiveness_and_youth_participation_programs"  
+ 
+ 
+```{r}
+unique(does_your_institution_have_gender_inclusiveness_and_youth_participation_programs)
+```
+ 
+```{r}
+
+psp_24 <- psp_24 %>%
+  mutate(
+    does_your_institution_have_gender_inclusiveness_and_youth_participation_programs = case_when(
+      does_your_institution_have_gender_inclusiveness_and_youth_participation_programs == "N/A" ~ NA_character_,
+        
+        TRUE ~ does_your_institution_have_gender_inclusiveness_and_youth_participation_programs
+      
+    ),
+    does_your_institution_have_gender_inclusiveness_and_youth_participation_programs = factor(
+      does_your_institution_have_gender_inclusiveness_and_youth_participation_programs, levels = c("Yes", "No")
+    )
+  )
+
+
+
+```
+ 
+ 
+```{r}
+unique(psp_24$does_your_institution_have_gender_inclusiveness_and_youth_participation_programs)
+```
+
+ 
+ 
+ 
+## ***TBD*** [8] "please_provide_more_details_if_your_institution_have_gender_inclusiveness_and_youth_participation_programs"   
+ 
+ 
+```{r}
+unique(please_provide_more_details_if_your_institution_have_gender_inclusiveness_and_youth_participation_programs)
+```
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+## [9] "name_of_the_county_where_your_the_institution_is_located"       
+ 
+ 
+```{r}
+unique(name_of_the_county_where_your_the_institution_is_located)
+```
+ 
+ 
+```{r}
+
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    name_of_the_county_where_your_the_institution_is_located = str_to_title(name_of_the_county_where_your_the_institution_is_located),
+    
+    name_of_the_county_where_your_the_institution_is_located = if_else(name_of_the_county_where_your_the_institution_is_located %in% c("Kwale/Samburu Sub County", "Kwale County Government", "Kwale County"), "Kwale", name_of_the_county_where_your_the_institution_is_located), 
+    
+    name_of_the_county_where_your_the_institution_is_located = if_else(name_of_the_county_where_your_the_institution_is_located %in% "Tharakanithi", "Tharaka Nithi", name_of_the_county_where_your_the_institution_is_located),
+    
+     name_of_the_county_where_your_the_institution_is_located = if_else(name_of_the_county_where_your_the_institution_is_located %in% c("Baringo County", "Baringo ,Tiaty East Sub County Paka Location", "Silale Ward Youth Program"), "Baringo", name_of_the_county_where_your_the_institution_is_located),
+    
+    name_of_the_county_where_your_the_institution_is_located = if_else(name_of_the_county_where_your_the_institution_is_located %in% "Embu County", "Embu", name_of_the_county_where_your_the_institution_is_located),
+    
+    name_of_the_county_where_your_the_institution_is_located = if_else(name_of_the_county_where_your_the_institution_is_located %in% "Kenya", NA_character_, name_of_the_county_where_your_the_institution_is_located),
+    
+    name_of_the_county_where_your_the_institution_is_located = factor(name_of_the_county_where_your_the_institution_is_located)
+    
+  )
+```
+ 
+ 
+ 
+  
+```{r}
+unique(psp_24$name_of_the_county_where_your_the_institution_is_located)
+```
+ 
+ 
+## ***Multi-response*** [10] "what_are_the_priority_crops_in_your_region"    
+
+
+[11] "what_are_the_priority_crops_in_your_region_maize"    
+
+[12] "what_are_the_priority_crops_in_your_region_wheat"                                                                                                 
+[13] "what_are_the_priority_crops_in_your_region_rice"                                                                                                  
+[14] "what_are_the_priority_crops_in_your_region_sorghum"                                                                                               
+[15] "what_are_the_priority_crops_in_your_region_millet"                                                                                                
+[16] "what_are_the_priority_crops_in_your_region_beans"                                                                                                 
+[17] "what_are_the_priority_crops_in_your_region_vegetables"                                                                                            
+[18] "what_are_the_priority_crops_in_your_region_sweat_potatoes"                                                                                        
+[19] "what_are_the_priority_crops_in_your_region_irish_potatoes"                                                                                        
+[20] "what_are_the_priority_crops_in_your_region_tea"                                                                                                   
+[21] "what_are_the_priority_crops_in_your_region_coffee"                                                                                                
+[22] "what_are_the_priority_crops_in_your_region_sugarcane"    
+
+
+***To be dropped*** [23] "what_are_the_priority_crops_in_your_region_other_crops_please_specify"    
+
+
+## [24] "please_specify_priority_crops_in_your_region"   
+
+```{r}
+unique(please_specify_priority_crops_in_your_region)
+```
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    please_specify_priority_crops_in_your_region = str_to_title(please_specify_priority_crops_in_your_region),
+    
+    please_specify_priority_crops_in_your_region = if_else(please_specify_priority_crops_in_your_region %in% c("Green Grams And Cow Peas", "Cowpeas And Green Grams"), "Green Grams;Cow Peas", please_specify_priority_crops_in_your_region),
+    
+    please_specify_priority_crops_in_your_region = if_else(please_specify_priority_crops_in_your_region %in% "Green Gram", "Green Grams", please_specify_priority_crops_in_your_region),
+    
+    please_specify_priority_crops_in_your_region = if_else(please_specify_priority_crops_in_your_region %in% "Cowpeas, Greengrams, Citrus, Passion Fruits." , "Cow Peas;Green Grams;Citrus Fruits;Passion Fruits", please_specify_priority_crops_in_your_region),
+    
+    please_specify_priority_crops_in_your_region = if_else(please_specify_priority_crops_in_your_region %in% "Maize, Beans, Tomatoes, Sunflowers, Watermelons, Butternut And Millet" , "Tomatoes;Sunflower;Watermelons;Butternut;Millet", please_specify_priority_crops_in_your_region)
+    
+  )
+
+
+
+```
+
+
+```{r}
+unique(psp_24$please_specify_priority_crops_in_your_region)
+```
+
+```{r}
+other_crops <- psp_24 %>%
+  dplyr::select(index, 10, 24) %>%
+  filter(!is.na(please_specify_priority_crops_in_your_region))
+
+kable(other_crops)
+```
+
+
+
+
+
+## ***Multi-response*** [25] "what_are_the_main_problems_of_the_crops_in_your_region"   
+
+
+
+[26] "what_are_the_main_problems_of_the_crops_in_your_region_inadequate_access_to_irrigation_facilities"                                                
+[27] "what_are_the_main_problems_of_the_crops_in_your_region_high_input_costs_fertilizers_pesticides"                                                   
+[28] "what_are_the_main_problems_of_the_crops_in_your_region_lack_of_access_to_modern_farming_technologies"                                             
+[29] "what_are_the_main_problems_of_the_crops_in_your_region_market_access_challenges"                                                                  
+[30] "what_are_the_main_problems_of_the_crops_in_your_region_post_harvest_losses"                                                                       
+[31] "what_are_the_main_problems_of_the_crops_in_your_region_limited_access_to_credit_financing"                                                        
+[32] "what_are_the_main_problems_of_the_crops_in_your_region_insufficient_agricultural_extension_services"                                              
+[33] "what_are_the_main_problems_of_the_crops_in_your_region_climate_change_hazards_e_g_flooding_etc"                                                   
+[34] "what_are_the_main_problems_of_the_crops_in_your_region_wildlife_invasion"                                                                         
+[35] "what_are_the_main_problems_of_the_crops_in_your_region_inadequate_access_to_quality_farming_inputs"                                               
+[36] "what_are_the_main_problems_of_the_crops_in_your_region_land_tenure_issues_insecurity_fragmentation"                                               
+***To be dropped*** [37] "what_are_the_main_problems_of_the_crops_in_your_region_other_please_specify"                                                                      
+## [38] "please_specify_the_main_problem_of_the_crops_in_your_region"            
+
+
+```{r}
+unique(please_specify_the_main_problem_of_the_crops_in_your_region)
+```
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  
+  mutate(
+    
+    please_specify_the_main_problem_of_the_crops_in_your_region = str_to_sentence(please_specify_the_main_problem_of_the_crops_in_your_region),
+    
+    please_specify_the_main_problem_of_the_crops_in_your_region = if_else(please_specify_the_main_problem_of_the_crops_in_your_region %in% "Pest invasion of crops eg. Fall army worm etc", "Pest invasion of crops e.g. Fall army worm", please_specify_the_main_problem_of_the_crops_in_your_region),
+    
+    please_specify_the_main_problem_of_the_crops_in_your_region = if_else(please_specify_the_main_problem_of_the_crops_in_your_region %in% "Timing for farm input which are being supplied by kwale county government", "Timing for farm input which are being supplied by Kwale County Government", please_specify_the_main_problem_of_the_crops_in_your_region)
+    
+    
+  )
+```
+
+
+
+```{r}
+unique(psp_24$please_specify_the_main_problem_of_the_crops_in_your_region)
+```
+
+
+
+## ***Other,to be dropped*** [40] "please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region"    
+
+
+```{r}
+unique(please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region)
+```
+
+
+```{r}
+other_climate_info_source <- psp_24 %>%
+  dplyr::select(index, 9, 38:40) %>%
+  filter(!is.na(please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region))
+
+gt(other_climate_info_source)
+```
+
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region = if_else(please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region %in% "Traditional Indigenous knowledge", "Indigenous knowledge", please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region),
+    
+    please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region = if_else(please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region %in% c("ITk", "Indigenous knowledge (ITIKI)"), "Information Technology and Indigenous Knowledge (ITIKI)" , please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region),
+    
+    
+    please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region = if_else(please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region %in% "ITK, Meterologists", "Information Technology and Indigenous Knowledge (ITIKI)", please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region)
+    
+  )
+  
+```
+
++ Dropped Meterologists
+
+
+```{r}
+unique(psp_24$please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region)
+```
+
+
+
+
+
+
+## [39] "what_is_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region"  
+
+
+```{r}
+unique(what_is_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region)
+```
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    what_is_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region = str_replace_all(what_is_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region, "Other \\(specify\\)" ,
+                                               replacement = please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region),
+    
+    what_is_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region = factor(what_is_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region)
+    )
+```
+
+
+
+
+
+```{r}
+unique(psp_24$what_is_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region)
+```
+
+
+
+
+## [41] "based_on_weather_information_received_from_the_ps_ps_do_you_consider_that_the_forecast_was_accurate"    
+
+```{r}
+unique(based_on_weather_information_received_from_the_ps_ps_do_you_consider_that_the_forecast_was_accurate)
+```
+
+
+
+
+## [42] "if_yes_please_elaborate"        
+
+
+```{r}
+if_yes_please_elaborate
+```
+
+
+
+
+
+## ***To be dropped*** [43] "if_no_please_explain"  
+
+```{r}
+unique(if_no_please_explain)
+```
+
+
+
+## [44] "on_a_scale_from_1_10_how_accurate_was_the_forecast"       
+
+
+```{r}
+unique(on_a_scale_from_1_10_how_accurate_was_the_forecast)
+```
+
+
+
+
+## ***Blank column*** [45] "on_a_scale_from_1_10_how_clear_was_the_forecast" 
+
+
+```{r}
+unique(on_a_scale_from_1_10_how_clear_was_the_forecast)
+```
+
+
+
+## [46] "since_you_attended_the_last_ps_ps_do_you_think_that_your_interpretation_of_the_forecast_and_your_knowledge_about_climate_has"      
+
+
+```{r}
+unique(since_you_attended_the_last_ps_ps_do_you_think_that_your_interpretation_of_the_forecast_and_your_knowledge_about_climate_has)
+```
+
+
+
+
+## [47] "how_many_farmers_associated_with_your_institution_receive_agricultural_weather_information_from_the_ps_ps"  
+
+```{r}
+unique(how_many_farmers_associated_with_your_institution_receive_agricultural_weather_information_from_the_ps_ps)
+```
+
+```{r}
+
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    how_many_farmers_associated_with_your_institution_receive_agricultural_weather_information_from_the_ps_ps = if_else(how_many_farmers_associated_with_your_institution_receive_agricultural_weather_information_from_the_ps_ps %in% "None / NA", NA_character_, how_many_farmers_associated_with_your_institution_receive_agricultural_weather_information_from_the_ps_ps)
+    
+  )
+
+
+```
+
+
+```{r}
+unique(psp_24$how_many_farmers_associated_with_your_institution_receive_agricultural_weather_information_from_the_ps_ps)
+```
+
+
+## [48] "prior_to_receiving_agricultural_weather_information_from_the_ps_ps_what_was_the_quantity_quality_of_your_crop"  
+
+```{r}
+unique(prior_to_receiving_agricultural_weather_information_from_the_ps_ps_what_was_the_quantity_quality_of_your_crop)
+```
+
+
+## [49] "after_receiving_agricultural_weather_information_from_the_ps_ps_what_was_the_quantity_quality_of_your_crop"  
+
+
+```{r}
+unique(after_receiving_agricultural_weather_information_from_the_ps_ps_what_was_the_quantity_quality_of_your_crop)
+```
+
+
+
+
+## [50] "what_has_been_the_effect_that_the_ps_ps_has_had_on_your_agricultural_activities_or_the_activities_of_the_farmers_associated_with_your_institution"
+
+
+```{r}
+unique(what_has_been_the_effect_that_the_ps_ps_has_had_on_your_agricultural_activities_or_the_activities_of_the_farmers_associated_with_your_institution)
+```
+
+
+
+## ***Multi-response*** [51] "ps_ps_information_was_useful_for"     
+
+
+
+```{r}
+unique(ps_ps_information_was_useful_for)
+```
+
+
+
+[52] "ps_ps_information_was_useful_for_crop_planning_choice_of_planting_date_fertilizers_varieties_others"        
+
+[53] "ps_ps_information_was_useful_for_crop_management_fertilization_shade_irrigation_pest_control_others"                                              
+[54] "ps_ps_information_was_useful_for_optimize_resources_avoid_losses"                                                                                 
+[55] "ps_ps_information_was_useful_for_prevent_climate_hazards_strong_winds_rain"                                                                       
+***Tobe dropped*** [56] "ps_ps_information_was_useful_for_other_please_specify"      
+
+
+
+
+
+## ***Tobe dropped*** [57] "please_specify_where_ps_ps_information_was_useful"    
+
+
+```{r}
+unique(please_specify_where_ps_ps_information_was_useful)
+```
+
+
+```{r}
+other_psp_info_use <- psp_24 %>%
+  dplyr::select(index, 51, 57) %>%
+  filter(!is.na(please_specify_where_ps_ps_information_was_useful))
+
+gt(other_psp_info_use)
+```
+
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    please_specify_where_ps_ps_information_was_useful = ifelse(please_specify_where_ps_ps_information_was_useful %in% "Early planting,Varieties to plant.", "Early planting,Varieties to plant", please_specify_where_ps_ps_information_was_useful)
+  )
+```
+
+
+```{r}
+unique(psp_24$please_specify_where_ps_ps_information_was_useful)
+```
+
+
+## [58] "do_you_have_any_limitations_when_applying_the_knowledge_learned_from_the_ps_ps"    
+
+
+```{r}
+unique(do_you_have_any_limitations_when_applying_the_knowledge_learned_from_the_ps_ps)
+```
+
+
+
+## ***Blank column*** [59] "if_yes_please_specify_any_limitations_when_applying_the_knowledge_learned_from_the_ps_ps"   
+
+
+```{r}
+unique(if_yes_please_specify_any_limitations_when_applying_the_knowledge_learned_from_the_ps_ps)
+```
+
+
+
+## ***Section*** [60] "in_the_next_section_section_f_we_will_focus_on_the_dissemination_channels_of_weather_information_from_ps_ps"   
+
+
+```{r}
+unique(in_the_next_section_section_f_we_will_focus_on_the_dissemination_channels_of_weather_information_from_ps_ps)
+```
+
+
+
+## ***Multi-response*** [61] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps"   
+
+```{r}
+unique(by_what_means_do_you_receive_the_weather_information_from_the_ps_ps)
+```
+
+
+
+[62] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_whats_app"                                                                    
+[63] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_you_tube"                                                                     
+[64] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_tik_tok"                                                                      
+[65] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_facebook"                                                                     
+[66] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_e_mail"                                                                       
+[67] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_web_pages"                                                                    
+[68] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_bulletin_in_paper_or_related_printed_material"                                
+[69] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_local_radio"                                                                  
+[70] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_face_to_face_in_visits_or_workshops"                                          
+***Other, to be dropped*** [71] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_other_means_please_specify"                                                   
+## ***may be excluded*** [72] "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_i_don_t_receive_weather_information_from_ps_ps"   
+
+
+```{r}
+unique(by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_i_don_t_receive_weather_information_from_ps_ps)
+```
+
+
+
+## ***Other,to be dropped*** [73] "please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps"   
+
+
+
+```{r}
+unique(please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps)
+```
+
+
+```{r}
+other_info_means <- psp_24 %>%
+  dplyr::select(index, 61, 73) %>%
+  filter(!is.na(please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps))
+
+gt(other_info_means)
+```
+
+
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+   
+    please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps = ifelse(please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps %in% "Groups,,churches,,barazas,", "Groups;Church;Barazas", please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps) ,
+    
+    please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps = ifelse(please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps %in% "SMS/WhatsApp", "SMS", please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps) ,
+    
+     please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps = ifelse(please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps %in% "Messages via mobile phones", "SMS", please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps),
+    
+    please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps = ifelse(please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps %in% "Bananas,  churches, SMS, Posters", "Church;SMS;Posters", please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps),
+    
+    please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps = ifelse(please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps %in% "Radio", NA_character_, please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps)
+  )
+```
+
+
+
+```{r}
+unique(psp_24$please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps)
+```
+
+
+
+## ***Other, to be dropped*** [75] "please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps"       
+
+
+```{r}
+unique(please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps)
+```
+
+
+
+```{r}
+other_preferred_info_means <- psp_24 %>%
+  dplyr::select(index, 74:75) %>%
+  filter(!is.na(please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps))
+
+gt(other_preferred_info_means)
+```
+
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+   
+    please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps = ifelse(please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps %in% "Messages", "SMS", please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps) ,
+    
+   
+    please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps = ifelse(please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps %in% "Radio", "Local Radio", please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps)
+  )
+```
+
+
+
+```{r}
+unique(psp_24$please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps)
+```
+
+
+
+
+## [74] "what_means_do_you_prefer_to_receive_weather_information_from_the_ps_ps"   
+
+
+```{r}
+unique(what_means_do_you_prefer_to_receive_weather_information_from_the_ps_ps)
+```
+
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    
+    what_means_do_you_prefer_to_receive_weather_information_from_the_ps_ps = str_replace_all(what_means_do_you_prefer_to_receive_weather_information_from_the_ps_ps, "Other means \\(Please specify\\)",
+                                               replacement = please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps),
+    
+    what_means_do_you_prefer_to_receive_weather_information_from_the_ps_ps = factor(
+      what_means_do_you_prefer_to_receive_weather_information_from_the_ps_ps
+      )
+    )
+```
+
+
+```{r}
+unique(psp_24$what_means_do_you_prefer_to_receive_weather_information_from_the_ps_ps)
+```
+
+
+
+## [76] "would_you_recommend_weather_information_from_the_ps_ps_as_a_reliable_source_of_information_to_improve_agricultural_production_and_risk_mitigation"
+
+
+```{r}
+unique(would_you_recommend_weather_information_from_the_ps_ps_as_a_reliable_source_of_information_to_improve_agricultural_production_and_risk_mitigation)
+```
+
+
+```{r}
+psp_24 <- psp_24 %>%
+  mutate(
+    would_you_recommend_weather_information_from_the_ps_ps_as_a_reliable_source_of_information_to_improve_agricultural_production_and_risk_mitigation = str_remove_all(would_you_recommend_weather_information_from_the_ps_ps_as_a_reliable_source_of_information_to_improve_agricultural_production_and_risk_mitigation, "\\.")
+    
+  )
+```
+
+
+
+```{r}
+unique(psp_24$would_you_recommend_weather_information_from_the_ps_ps_as_a_reliable_source_of_information_to_improve_agricultural_production_and_risk_mitigation) 
+```
+
+
+## [77] "do_you_have_any_suggestions_for_improving_the_dissemination_of_weather_information_from_the_ps_ps"                                                
+
+
+```{r}
+unique(do_you_have_any_suggestions_for_improving_the_dissemination_of_weather_information_from_the_ps_ps)
+```
+
+
+```{r}
+#readr::write_csv(psp_24, "psp_24.csv")
+```
+
+
+```{r}
+names(psp_24)
+```
+
+```{r}
+column_labels <- c(
+    
+index = "index",                                                                                                                                            
+ gender = "sex_of_the_respondent",                                                                                                                            
+ institution =  "what_type_of_institution_do_you_belong_to_or_work_for" ,                                                                                           
+ institution_specify = "please_specify_institution_you_belong_to_or_work_for" ,                                                                                            
+ role_in_institution =  "what_is_your_role_in_this_institution"  ,                                                                                                          
+role_in_institution_specify =  "please_specify_your_role_in_this_institution"  ,                                                                                                   
+ gender_youth_inclusiveness = "does_your_institution_have_gender_inclusiveness_and_youth_participation_programs"   ,                                                              
+ gender_youth_inclusive_details = "please_provide_more_details_if_your_institution_have_gender_inclusiveness_and_youth_participation_programs",                                       
+county = "name_of_the_county_where_your_the_institution_is_located"   ,                                                                                      
+priority_crops = "what_are_the_priority_crops_in_your_region"     ,                                                                                                  
+priority_crops_maize = "what_are_the_priority_crops_in_your_region_maize"    ,                                                                                             
+priority_crops_wheat =  "what_are_the_priority_crops_in_your_region_wheat"  ,                                                                                               
+priority_crops_rice = "what_are_the_priority_crops_in_your_region_rice"  ,                                                                                                
+priority_crops_sorghum = "what_are_the_priority_crops_in_your_region_sorghum" ,                                                                                              
+priority_crops_millet = "what_are_the_priority_crops_in_your_region_millet" ,                                                                                               
+priority_crops_beans = "what_are_the_priority_crops_in_your_region_beans"  ,                                                                                               
+priority_crops_vegetables = "what_are_the_priority_crops_in_your_region_vegetables"   ,                                                                                         
+priority_crops_sweetpotatoes = "what_are_the_priority_crops_in_your_region_sweat_potatoes" ,                                                                                       
+priority_crops_potatoes = "what_are_the_priority_crops_in_your_region_irish_potatoes"  ,                                                                                      
+priority_crops_tea = "what_are_the_priority_crops_in_your_region_tea"   ,                                                                                                
+priority_crops_coffee = "what_are_the_priority_crops_in_your_region_coffee"    ,                                                                                            
+priority_crops_sugarcane = "what_are_the_priority_crops_in_your_region_sugarcane"  ,                                                                                           
+priority_crops_specify = "what_are_the_priority_crops_in_your_region_other_crops_please_specify"  ,                                                                          
+priority_crops_specified = "please_specify_priority_crops_in_your_region"   ,                                                                                                  
+crop_problems = "what_are_the_main_problems_of_the_crops_in_your_region"   ,                                                                                        
+crop_problems_a = "what_are_the_main_problems_of_the_crops_in_your_region_inadequate_access_to_irrigation_facilities" ,                                               
+crop_problems_b = "what_are_the_main_problems_of_the_crops_in_your_region_high_input_costs_fertilizers_pesticides" ,                                                  
+crop_problems_c = "what_are_the_main_problems_of_the_crops_in_your_region_lack_of_access_to_modern_farming_technologies"  ,                                           
+crop_problems_d = "what_are_the_main_problems_of_the_crops_in_your_region_market_access_challenges"   ,                                                               
+crop_problems_e = "what_are_the_main_problems_of_the_crops_in_your_region_post_harvest_losses"  ,                                                                     
+crop_problemsf = "what_are_the_main_problems_of_the_crops_in_your_region_limited_access_to_credit_financing"  ,                                                      
+crop_problemsg = "what_are_the_main_problems_of_the_crops_in_your_region_insufficient_agricultural_extension_services"   ,                                           
+crop_problems_h = "what_are_the_main_problems_of_the_crops_in_your_region_climate_change_hazards_e_g_flooding_etc"   ,                                                
+crop_problems_i = "what_are_the_main_problems_of_the_crops_in_your_region_wildlife_invasion",                                                                         
+crop_problems_j = "what_are_the_main_problems_of_the_crops_in_your_region_inadequate_access_to_quality_farming_inputs" ,                                              
+crop_problems_k = "what_are_the_main_problems_of_the_crops_in_your_region_land_tenure_issues_insecurity_fragmentation"  ,                                             
+crop_problems_other = "what_are_the_main_problems_of_the_crops_in_your_region_other_please_specify"        ,                                                              
+crop_problems_specified = "please_specify_the_main_problem_of_the_crops_in_your_region"   ,                                                                                   
+climate_info_source = "what_is_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region",                                                             
+climate_info_source_specify = "please_specify_the_main_source_of_climate_information_for_you_or_for_farmers_in_this_region"   ,                                                   
+forecast_was_accurate = "based_on_weather_information_received_from_the_ps_ps_do_you_consider_that_the_forecast_was_accurate"   ,                                           
+forecast_was_accurate_yes = "if_yes_please_elaborate"     ,                                                                                                                     
+forecast_was_accurate_no = "if_no_please_explain"  ,                                                                                                                           
+accuracy_scale = "on_a_scale_from_1_10_how_accurate_was_the_forecast"  ,                                                                                             
+clear_scale = "on_a_scale_from_1_10_how_clear_was_the_forecast" ,                                                                                                 
+forecast_interpretation = "since_you_attended_the_last_ps_ps_do_you_think_that_your_interpretation_of_the_forecast_and_your_knowledge_about_climate_has"     ,                
+no_farners_receiving_info = "how_many_farmers_associated_with_your_institution_receive_agricultural_weather_information_from_the_ps_ps"     ,                                   
+prior_crop_quantity = "prior_to_receiving_agricultural_weather_information_from_the_ps_ps_what_was_the_quantity_quality_of_your_crop"   ,                                 
+post_crop_quantity = "after_receiving_agricultural_weather_information_from_the_ps_ps_what_was_the_quantity_quality_of_your_crop"  ,                                     
+psp_effect_agric_activity = "what_has_been_the_effect_that_the_ps_ps_has_had_on_your_agricultural_activities_or_the_activities_of_the_farmers_associated_with_your_institution",
+psp_info_useful = "ps_ps_information_was_useful_for"   ,                                                                                                              
+info_useful_a = "ps_ps_information_was_useful_for_crop_planning_choice_of_planting_date_fertilizers_varieties_others" ,                                             
+info_useful_b = "ps_ps_information_was_useful_for_crop_management_fertilization_shade_irrigation_pest_control_others" ,                                             
+info_useful_c = "ps_ps_information_was_useful_for_optimize_resources_avoid_losses" ,                                                                                
+info_useful_d = "ps_ps_information_was_useful_for_prevent_climate_hazards_strong_winds_rain"    ,                                                                   
+info_useful_specify = "ps_ps_information_was_useful_for_other_please_specify"   ,                                                                                         
+info_useful_specified = "please_specify_where_ps_ps_information_was_useful"   ,                                                                                             
+limitation = "do_you_have_any_limitations_when_applying_the_knowledge_learned_from_the_ps_ps"      ,                                                             
+limitation_specify = "if_yes_please_specify_any_limitations_when_applying_the_knowledge_learned_from_the_ps_ps"    ,                                                     
+sectn_dissemination_channels = "in_the_next_section_section_f_we_will_focus_on_the_dissemination_channels_of_weather_information_from_ps_ps",                                      
+dissemination_channels = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps" ,                                                                            
+dissemination_channels_whats_app = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_whats_app",                                                                    
+channels_you_tube = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_you_tube"  ,                                                                   
+channels_tik_tok = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_tik_tok" ,                                                                     
+channels_facebook = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_facebook" ,                                                                    
+channels_e_mail = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_e_mail",                                                                       
+dissemination_channels_web_pages = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_web_pages" ,                                                                   
+dissemination_channels_bulletin = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_bulletin_in_paper_or_related_printed_material"  ,                              
+channels_local_radio = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_local_radio"   ,                                                               
+channels_workshops = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_face_to_face_in_visits_or_workshops" ,                                         
+channels_specify = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_other_means_please_specify"    ,                                               
+channels_don_t_receive = "by_what_means_do_you_receive_the_weather_information_from_the_ps_ps_i_don_t_receive_weather_information_from_ps_ps"  ,                             
+channels_specified = "please_specify_means_do_you_receive_the_weather_information_from_the_ps_ps"  ,                                                                     
+preferred_means = "what_means_do_you_prefer_to_receive_weather_information_from_the_ps_ps"  ,                                                                         
+preferred_means_specify = "please_specify_means_you_prefer_to_receive_weather_information_from_the_ps_ps" ,                                                                   
+recommend = "would_you_recommend_weather_information_from_the_ps_ps_as_a_reliable_source_of_information_to_improve_agricultural_production_and_risk_mitigation",
+suggestions = "do_you_have_any_suggestions_for_improving_the_dissemination_of_weather_information_from_the_ps_ps"                                                
+
+)
+
+```
+
+
+
+
+```{r}
+psp_24 <- psp_24 %>%
+     set_variable_labels(.labels = column_labels)
+```
+
+
+
+
+```{r}
+names(psp_24)
+```
+
+
+
+```{r}
+# Data dictionary
+
+psp_24_dict <- look_for(psp_24, labels = TRUE, values = TRUE) %>%
+  dplyr::select(-c(missing, value_labels))
+
+  gt(psp_24_dict)
+
+```
+
+
+## Export data dictionary to CSV
+
+```{r}
+
+readr::write_csv(psp_24_dict, "psp_24_dict.csv")
+
+```
+
+## Export data to CSV
+
+```{r}
+
+readr::write_csv(psp_24, "psp_24.csv")
+
+```
+
+## Save as R data
+
+```{r}
+
+save(psp_24, file = "psp_24.RData")
+```
+
+## Export data to SPSS
+
+```{r}
+
+#write.foreign(psp_24, "psp_24.sav", "psp_24", package = "SPSS")
+
+```
+
+## Export data to STATA
+
+```{r}
+
+#write_dta(psp_24, "psp_24.dta")
+
+```
+
+
+
+
+
